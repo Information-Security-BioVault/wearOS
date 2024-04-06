@@ -53,8 +53,40 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun WearApp(greetingName: String) {
-}
+    BioVaultWatchTheme {
+        Box(
+            //        contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colors.background)
+                .padding(10.dp),
+        ) {
+            TimeText()
 
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 30.dp),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colors.primary,
+                text = stringResource(R.string.main_information, "Android"),
+            )
+            Button(
+                onClick = {
+                    Log.d("BioVault", "버튼 클릭")
+                },
+                enabled = true,
+                modifier = Modifier
+                    .padding(vertical = 70.dp)
+                    .fillMaxWidth(),
+            ) {
+                Text(
+                    text = "심박수 측정"
+                )
+            }
+        }
+    }
+}
 
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
