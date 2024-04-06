@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">BioVaultWatch</string>
+    <!--
+    This string is used for square devices and overridden by hello_world in
+    values-round/strings.xml for round devices.
+    -->
+    <string name="main_information">BioVault 잠금 해제</string>
+    <string name="button_check">심박수 측정하기</string>
+</resources>
