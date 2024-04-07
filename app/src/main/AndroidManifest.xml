@@ -35,6 +35,14 @@
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
+        <receiver
+            android:name=".FitnessDataReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="hs.passivemonitoring.DATA" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
