@@ -7,64 +7,92 @@
 package com.project.biovaultwatch.presentation
 
 import android.Manifest
-import android.content.ComponentName
+import android.app.Activity
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.Surface
+import android.view.View
+import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.concurrent.futures.await
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.health.services.client.HealthServices
-import androidx.health.services.client.data.DataType
-import androidx.health.services.client.data.PassiveMonitoringConfig
-import androidx.lifecycle.lifecycleScope
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.Scopes
+import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.common.api.Scope
 import com.google.android.gms.fitness.Fitness
-import com.project.biovaultwatch.FitnessDataReceiver
+import com.google.android.gms.fitness.FitnessOptions
+import com.google.android.gms.fitness.data.DataSource
+import com.google.android.gms.fitness.data.DataType
+import com.google.android.gms.fitness.request.DataReadRequest
+import com.google.android.gms.fitness.request.DataSourcesRequest
+import com.google.android.gms.fitness.request.SensorRequest
+import com.google.android.material.snackbar.Snackbar
 import com.project.biovaultwatch.R
 import com.project.biovaultwatch.presentation.theme.BioVaultWatchTheme
-import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Date
+import java.util.concurrent.TimeUnit
+
 
 class MainActivity : ComponentActivity() {
 
-    var supportsHeartRate = false
+    val TAG = "##"
 
-    // 확인할 권한 목록
-    val permissionList = arrayOf(
-        Manifest.permission.BODY_SENSORS,
-        Manifest.permission.BODY_SENSORS_BACKGROUND,
-    )
+    private val GOOGLE_FIT_PERMISSIONS_REQUEST_CODE = 1
+    private val runningQOrLater =
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+
+    private val fitnessOptions = FitnessOptions.builder()
+        .addDataType(DataType.TYPE_HEART_RATE_BPM, FitnessOptions.ACCESS_READ)
+        .addDataType(DataType.TYPE_HEART_POINTS, FitnessOptions.ACCESS_READ)
+        .build()
+
+    private val activityRequestCode = 100
+
+    private lateinit var sensorManager: SensorManager
+    private var heartRateSensor: Sensor? = null
+    private val heartRateListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            if (event.sensor.type == Sensor.TYPE_HEART_RATE) {
+                val heartRate = event.values[0]
+                // 심박수 데이터를 처리합니다.
+                Log.d(TAG, "heartRate : ${heartRate}")
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+            // 정확도 변화 처리
+        }
+    }
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -73,45 +101,48 @@ class MainActivity : ComponentActivity() {
 
         setTheme(android.R.style.Theme_DeviceDefault)
 
-        requestPermissions(permissionList,0)
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
+
+        heartRateSensor?.also { sensor ->
+            sensorManager.registerListener(heartRateListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+
+//        checkPermissionsAndRun(GOOGLE_FIT_PERMISSIONS_REQUEST_CODE)
+
+        // Note: Fitness.SensorsApi.findDataSources() requires the
+        // ACCESS_FINE_LOCATION permission.
+//        Fitness.getSensorsClient(this, GoogleSignIn.getAccountForExtension(this, fitnessOptions))
+//            .findDataSources(
+//                DataSourcesRequest.Builder()
+//                    .setDataTypes(DataType.TYPE_HEART_RATE_BPM)
+//                    .setDataSourceTypes(DataSource.TYPE_RAW)
+//                    .build())
+//            .addOnSuccessListener { dataSources ->
+//                dataSources.forEach {
+//                    Log.i(TAG, "Data source found: ${it.streamIdentifier}")
+//                    Log.i(TAG, "Data Source type: ${it.dataType.name}")
+//
+//                    if (it.dataType == DataType.TYPE_HEART_RATE_BPM) {
+//                        Log.i(TAG, "Data source for TYPE_HEART_RATE_BPM found!")
+//                    }
+//                }
+//            }
+//            .addOnFailureListener { e ->
+//                Log.e(TAG, "Find data sources request failed", e)
+//            }
+
 
         setContent {
 //                MainScreen()
 
             WearApp(greetingName = "Android")
         }
-
-        val healthClient = HealthServices.getClient(this /*context*/)
-        val passiveMonitoringClient = healthClient.passiveMonitoringClient
-        lifecycleScope.launchWhenCreated {
-            val capabilities = passiveMonitoringClient.capabilities.await()
-            // Supported types for passive data collection
-            supportsHeartRate =
-                androidx.health.services.client.data.DataType.HEART_RATE_BPM in capabilities.supportedDataTypesPassiveMonitoring
-            // Supported types for PassiveGoals
-//            supportsStepsGoal =
-//                androidx.health.services.client.data.DataType.STEPS in capabilities.supportedDataTypesEvents
-
-            Log.d("BioVault", "capability : ${capabilities}")
-            Log.d("BioVault", "support heart rate : ${supportsHeartRate}")
-        }
     }
 
-    fun checkHeartRate() {
-        val dataTypes = setOf(DataType.HEART_RATE_BPM)
-        val config = PassiveMonitoringConfig.builder()
-            .setDataTypes(dataTypes)
-            .setComponentName(ComponentName(this, FitnessDataReceiver::class.java))
-            // To receive UserActivityState updates, ACTIVITY_RECOGNITION permission is required.
-            .setShouldIncludeUserActivityState(true)
-            .build()
-        lifecycleScope.launch {
-            HealthServices.getClient(this@MainActivity)
-                .passiveMonitoringClient
-                .registerDataCallback(config)
-                .await()
-        }
-        Log.d("BioVault", "heart rate : ${dataTypes} / ${config}")
+    override fun onDestroy() {
+        super.onDestroy()
+        sensorManager.unregisterListener(heartRateListener)
     }
 
     @Composable
@@ -137,7 +168,6 @@ class MainActivity : ComponentActivity() {
                 Button(
                     onClick = {
                         Log.d("BioVault", "버튼 클릭")
-                        checkHeartRate()
                     },
                     enabled = true,
                     modifier = Modifier
@@ -152,62 +182,92 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-//    @Composable
-//    fun MainScreen() {
-//        val context = LocalContext.current
-//        var hasPermission by remember { mutableStateOf(false, false) }
-//
-//        val requestPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-//            if (isGranted) {
-//                // 권한이 허용된 경우에 실행할 작업을 여기에 추가
-//                hasPermission = true
-////                WearApp(greetingName = "Android")
-//                Log.d("BioVault", "권한 설정 완료")
-//            } else {
-//                // 권한이 거부된 경우에 대한 처리를 여기에 추가
-//                hasPermission = false
-//                // 사용자에게 권한이 필요하다는 설명을 제공할 수 있습니다.
-//                Log.d("BioVault", "권한 설정 필요")
-//            }
-//        }
-//
-//        // 앱이 시작될 때 권한을 확인하고, 없는 경우 권한을 요청합니다.
-//        LaunchedEffect(Unit) {
-//            val permissionStatus = context.checkSelfPermission(Manifest.permission.BODY_SENSORS_BACKGROUND)
-////            val permissionStatus2 = context.checkSelfPermission(Manifest.permission.BODY_SENSORS_BACKGROUND)
-//            if (permissionStatus == PackageManager.PERMISSION_GRANTED) {
-//                hasPermission = true
-//                Log.d("BioVault", "권한 설정 완료")
-//            } else {
-//                requestPermissionLauncher.launch(Manifest.permission.BODY_SENSORS)
-////                requestPermissionLauncher.launch(Manifest.permission.BODY_SENSORS_BACKGROUND)
-//            }
-//        }
-//
-//        Scaffold(
-//            content = {
-//                if (hasPermission) {
-//                    // 권한이 허용된 경우에 원하는 화면을 표시합니다.
-//                    Log.d("BioVault", "권한 설정 완료")
-//                    WearApp("Android")
-//                } else {
-//                    // 권한이 거부된 경우에 대체 화면을 표시할 수 있습니다.
-//                    Text(
-//                        text = "앱을 사용하려면 심박수 권한이 필요합니다.",
-//                        textAlign = TextAlign.Center,
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                            .padding(16.dp)
-////                            .align(Alignment.Center)
-//                    )
-//                }
-//            }
-//        )
-//    }
+    private fun checkPermissionsAndRun(fitActionRequestCode: Int) {
+        if (permissionApproved()) {
+            fitSignIn(fitActionRequestCode)
+        } else {
+            requestRuntimePermissions(fitActionRequestCode)
+        }
+    }
 
-    @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
-    @Composable
-    fun DefaultPreview() {
-        WearApp("Preview Android")
+    private fun requestPermissions() {
+        GoogleSignIn.requestPermissions(
+            this, // your activity
+            GOOGLE_FIT_PERMISSIONS_REQUEST_CODE,
+            getGoogleAccount(),
+            fitnessOptions)
+    }
+
+    private fun fitSignIn(requestCode: Int) {
+
+        if (!GoogleSignIn.hasPermissions(getGoogleAccount(), fitnessOptions)) {
+            requestPermissions()
+        } else {
+            Log.d(TAG, "fitSignIn else")
+        }
+    }
+
+    private fun getGoogleAccount() = GoogleSignIn.getAccountForExtension(this, fitnessOptions)
+
+    private fun permissionApproved(): Boolean {
+        val approved = if (runningQOrLater) {
+            PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            true
+        }
+        return approved
+    }
+
+    private fun requestRuntimePermissions(requestCode: Int) {
+        val shouldProvideRationale =
+            ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)
+
+        // Provide an additional rationale to the user. This would happen if the user denied the
+        // request previously, but didn't check the "Don't ask again" checkbox.
+        requestCode.let {
+            if (shouldProvideRationale) {
+                Log.i(ContentValues.TAG, "Displaying permission rationale to provide additional context.")
+                Snackbar.make(
+                    findViewById(android.R.id.content),
+                    "Permission Denied",
+                    Snackbar.LENGTH_INDEFINITE)
+                    .setAction("Settings") {
+                        // Request permission
+                        ActivityCompat.requestPermissions(this,
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                            requestCode)
+                    }
+                    .show()
+            } else {
+                Log.i(ContentValues.TAG, "Requesting permission")
+                // Request permission. It's possible this can be auto answered if device policy
+                // sets the permission in a given state or the user denied the permission
+                // previously and checked "Never ask again".
+                ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                    requestCode)
+            }
+        }
+        checkPermissionsAndRun(requestCode)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (resultCode) {
+            Activity.RESULT_OK -> when (requestCode) {
+                GOOGLE_FIT_PERMISSIONS_REQUEST_CODE -> Log.d(TAG, "result OK")
+                else -> {
+                    // Result wasn't from Google Fit
+                    Log.d(TAG, "Result wasn't from Google Fit")
+                }
+            }
+            else -> {
+                // Permission not granted
+                Toast.makeText(this, "Permission not granted", Toast.LENGTH_LONG).show()
+                requestPermissions()
+            }
+        }
     }
 }
