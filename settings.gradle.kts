@@ -16,8 +16,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        jcenter() // Warning: this repository is going to shut down soon
+        maven {url = uri("https://chaquo.com/maven/")}
         maven {url = uri("https://jitpack.io") }
+        jcenter() // Warning: this repository is going to shut down soon
     }
 }
 
