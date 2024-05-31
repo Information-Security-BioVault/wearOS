@@ -21,4 +21,6 @@ interface ApiService {
     fun authenticate(
         @Body parameters: AuthenticationRequestModel
     ): Call<AuthenticationResponseModel>
+
+
 }

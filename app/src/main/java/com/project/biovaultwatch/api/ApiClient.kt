@@ -17,7 +17,7 @@ import javax.net.ssl.X509TrustManager
 
 class ApiClient(val context: Context) {
 
-    val server_url = "http://10.50.32.51:5001"
+    val server_url = "http://192.168.0.32:5001"
 
     val gson = Gson()
 
@@ -38,7 +38,6 @@ class ApiClient(val context: Context) {
 
     val retrofit =
         Retrofit.Builder()
-//            .baseUrl(BuildConfig.server_url)
             .baseUrl(server_url)
             .client(getUnsafeOkHttpClient().build()) //SSL 우회
             .addConverterFactory(GsonConverterFactory.create())
@@ -79,6 +78,8 @@ class ApiClient(val context: Context) {
         builder.connectTimeout(500, TimeUnit.SECONDS)
         builder.readTimeout(500, TimeUnit.SECONDS)
         builder.writeTimeout(500, TimeUnit.SECONDS)
+        builder.callTimeout(500, TimeUnit.SECONDS)
+        builder.retryOnConnectionFailure(true)
 
         return builder
     }

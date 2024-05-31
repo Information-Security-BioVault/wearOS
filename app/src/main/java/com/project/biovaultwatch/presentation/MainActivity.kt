@@ -11,6 +11,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.inputmethodservice.Keyboard
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
@@ -23,10 +24,16 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +43,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -55,6 +64,7 @@ import com.project.biovaultwatch.api.model.request.EnrollRequestModel
 import com.project.biovaultwatch.api.model.response.AuthenticationResponseModel
 import com.project.biovaultwatch.api.model.response.EnrollResponseModel
 import com.project.biovaultwatch.presentation.theme.BioVaultWatchTheme
+import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -68,11 +78,20 @@ class MainActivity : ComponentActivity() {
 
     var deviceId = ""
 
+    lateinit var navController: NavHostController
 
+    private lateinit var wakeLock: PowerManager.WakeLock
+
+//    var list = listOf(listOf(83.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 90.0, 90.0, 91.0, 91.0, 92.0, 93.0, 94.0, 93.0, 95.0, 94.0, 94.0, 94.0, 92.0, 91.0, 92.0, 92.0, 91.0, 92.0, 94.0, 94.0, 93.0, 91.0, 92.0, 91.0, 92.0, 93.0, 92.0, 92.0, 93.0, 92.0, 91.0, 91.0, 90.0, 90.0, 90.0, 89.0, 90.0, 90.0, 91.0, 91.0, 92.0, 93.0, 93.0, 93.0, 93.0, 93.0, 92.0, 91.0, 90.0, 89.0, 89.0, 88.0, 88.0, 89.0, 88.0, 89.0, 89.0, 89.0, 88.0, 87.0, 86.0, 85.0, 84.0, 83.0, 82.0, 81.0, 81.0, 82.0, 84.0, 85.0, 83.0, 81.0, 79.0, 78.0, 79.0, 78.0, 78.0, 77.0, 76.0, 76.0, 77.0, 77.0, 78.0, 79.0, 81.0, 82.0, 81.0, 82.0),
+//        listOf(83.0, 83.0, 82.0, 81.0, 82.0, 81.0, 81.0, 81.0, 82.0, 82.0, 82.0, 82.0, 80.0, 80.0, 78.0, 77.0, 76.0, 76.0, 76.0, 76.0, 76.0, 76.0, 76.0, 76.0, 77.0, 77.0, 76.0, 76.0, 76.0, 77.0, 77.0, 77.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 83.0, 83.0, 82.0, 82.0, 81.0, 80.0, 80.0, 79.0, 80.0, 81.0, 81.0, 81.0, 83.0, 83.0, 83.0, 85.0, 86.0, 86.0, 87.0, 87.0, 86.0, 86.0, 85.0, 85.0, 85.0, 83.0, 82.0, 81.0, 80.0, 80.0, 79.0, 79.0, 78.0, 78.0, 78.0, 77.0, 77.0, 77.0, 78.0, 79.0, 78.0, 77.0, 77.0, 78.0, 79.0, 80.0, 82.0, 83.0, 84.0, 85.0, 85.0, 85.0, 84.0, 83.0, 83.0, 82.0, 81.0, 81.0, 80.0, 79.0, 79.0),
+//        listOf(79.0, 78.0, 78.0, 78.0, 78.0, 78.0, 78.0, 79.0, 79.0, 79.0, 80.0, 80.0, 80.0, 81.0, 81.0, 81.0, 81.0, 81.0, 81.0, 80.0, 80.0, 79.0, 78.0, 77.0, 77.0, 76.0, 76.0, 76.0, 76.0, 76.0, 77.0, 77.0, 78.0, 79.0, 80.0, 80.0, 80.0, 79.0, 79.0, 80.0, 80.0, 81.0, 81.0, 81.0, 80.0, 80.0, 81.0, 81.0, 81.0, 82.0, 83.0, 84.0, 84.0, 83.0, 83.0, 83.0, 83.0, 83.0, 83.0, 83.0, 82.0, 82.0, 83.0, 83.0, 82.0, 81.0, 81.0, 81.0, 80.0, 81.0, 82.0, 82.0, 82.0, 82.0, 82.0, 81.0, 81.0, 80.0, 80.0, 81.0, 81.0, 81.0, 80.0, 80.0, 79.0, 79.0, 80.0, 81.0, 81.0, 82.0, 83.0, 83.0, 82.0, 81.0, 81.0, 80.0, 80.0, 80.0, 81.0, 82.0),
+//        listOf(82.0, 82.0, 81.0, 80.0, 79.0, 79.0, 79.0, 78.0, 78.0, 79.0, 80.0, 79.0, 78.0, 77.0, 77.0, 77.0, 76.0, 76.0, 76.0, 75.0, 75.0, 74.0, 75.0, 77.0, 79.0, 81.0, 80.0, 79.0, 79.0, 78.0, 78.0, 78.0, 77.0, 77.0, 77.0, 77.0, 79.0, 79.0, 80.0, 79.0, 79.0, 78.0, 78.0, 78.0, 79.0, 77.0, 77.0, 77.0, 78.0, 79.0, 80.0, 79.0, 79.0, 78.0, 79.0, 79.0, 80.0, 79.0, 79.0, 79.0, 78.0, 79.0, 79.0, 79.0, 79.0, 79.0, 79.0, 80.0, 80.0, 81.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 89.0, 90.0, 91.0, 93.0, 92.0, 91.0, 91.0, 92.0, 94.0, 96.0, 95.0, 95.0, 95.0, 94.0, 94.0, 93.0, 92.0, 91.0, 90.0, 89.0, 90.0, 91.0, 91.0),
+//        listOf(91.0, 90.0, 89.0, 88.0, 87.0, 86.0, 85.0, 85.0, 85.0, 85.0, 84.0, 86.0, 86.0, 85.0, 86.0, 88.0, 90.0, 91.0, 93.0, 95.0, 93.0, 95.0, 95.0, 94.0, 93.0, 92.0, 90.0, 88.0, 88.0, 86.0, 83.0, 80.0, 79.0, 78.0, 77.0, 76.0, 76.0, 77.0, 77.0, 77.0, 78.0, 78.0, 80.0, 80.0, 79.0, 79.0, 78.0, 78.0, 78.0, 79.0, 80.0, 81.0, 81.0, 82.0, 82.0, 82.0, 83.0, 83.0, 83.0, 81.0, 80.0, 79.0, 77.0, 77.0, 76.0, 78.0, 79.0, 80.0, 81.0, 81.0, 81.0, 80.0, 78.0, 78.0, 78.0, 79.0, 80.0, 80.0, 81.0, 82.0, 83.0, 85.0, 86.0, 88.0, 89.0, 90.0, 91.0, 91.0, 91.0, 90.0, 88.0, 87.0, 86.0, 86.0, 85.0, 84.0, 84.0, 84.0, 84.0, 84.0))
 
 
 //    lateinit var client1: PyObject
 
+    // 센서를 통해 심박수 데이터 받아오기
     private lateinit var sensorManager: SensorManager
     private var heartRateSensor: Sensor? = null
     private val heartRateListener = object : SensorEventListener {
@@ -85,40 +104,34 @@ class MainActivity : ComponentActivity() {
                 Log.d(TAG, "heartRate list : ${heartRateList}")
                 Log.d(TAG, "heartRate : ${heartRate}")
                 Log.d(TAG, "heartRate : ${heartRateList.size}")
-                if(heartRateList.size == 100) {
-                    Log.d(TAG, "heartRate list size 100")
-                    // 처음이 아닐 경우 서버 통신 (심박수 데이터 전송)
-                    if(MyApplication.preferences.getString("isFirst", "true") == "false") {
-                        Log.d(TAG, "isFirst : ${MyApplication.preferences.getString("isFirst", "true")}")
+                if (MyApplication.status == "register") {
+                    // 정보 등록 서버 통신 (심박수 데이터 등록)
+                    if (heartRateList.size == 500) {
+                        Log.d(TAG, "heartRate list size 500")
+                        // 100개씩 나누어 5개의 리스트로 분할
+                        var chunkedLists = heartRateList.chunked(100)
+
+                        // 결과 출력
+                        chunkedLists.forEachIndexed { index, list ->
+                            Log.d(TAG, "List ${index + 1}: $list")
+                        }
+
+                        enroll(chunkedLists)
+                        heartRateList.clear()
+                    }
+                } else {
+                    // 잠금 해제 서버 통신 (심박수 데이터 전송)
+                    if (heartRateList.size == 100) {
+                        Log.d(TAG, "heartRate list size 100")
                         authenticate()
                     }
-                    else {
-                        Log.d(
-                            TAG,
-                            "isFirst : ${MyApplication.preferences.getString("isFirst", "true")}"
-                        )
-                    }
-                    // 파이썬 코드 실행을 위한 Chaquopy 플러그인 추가
-                    /*  val encryptFunction = client1.callAttr("encrypt")
+                }
+                // 파이썬 코드 실행을 위한 Chaquopy 플러그인 추가
+                /*  val encryptFunction = client1.callAttr("encrypt")
                         val encryption = encryptFunction.toString()
                         Log.d(TAG, "encryption value : ${encryption}") */
-                }
-                // 처음인 경우 서버 통신 (심박수 데이터 등록)
-                else if(heartRateList.size == 500) {
-                    Log.d(TAG, "heartRate list size 500")
-                    // 100개씩 나누어 5개의 리스트로 분할
-                    var chunkedLists = heartRateList.chunked(100)
-
-                    // 결과 출력
-                    chunkedLists.forEachIndexed { index, list ->
-                        Log.d(TAG, "List ${index + 1}: $list")
-                    }
-
-                    enroll(chunkedLists)
-                    heartRateList.clear()
-                }
-    }
-}
+            }
+        }
 
         override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
             // 정확도 변화 처리
@@ -146,6 +159,9 @@ class MainActivity : ComponentActivity() {
 
         Log.d(TAG,"deviceInformation 확인 : ${deviceId}")
 
+        // WearOS 전원 상태 관리
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "MyApp::MyWakelockTag")
 
         // 파이썬 코드 실행을 위한 Chaquopy 플러그인 추가
         /*         // Python 인터프리터 초기화
@@ -171,24 +187,37 @@ class MainActivity : ComponentActivity() {
 
                 // 인자 설정
                 client1.callAttr("set_args")  */
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // WakeLock을 얻기
+        wakeLock.acquire()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // WakeLock 해제
+        if (wakeLock.isHeld) {
+            wakeLock.release()
         }
+    }
 
         @OptIn(ExperimentalComposeUiApi::class)
         @Composable
         fun MainScreen() {
         BioVaultWatchTheme {
-            var navController = rememberNavController()
+            navController = rememberNavController()
             NavHost(
                 navController = navController,
                 startDestination = "HomeScreen"
             ) {
                 composable("HomeScreen") {
                     Box(
-                        //        contentAlignment = Alignment.Center,
+//                        contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colors.background)
-                            .padding(10.dp),
+                            .background(MaterialTheme.colors.background),
                     ) {
                         TimeText()
 
@@ -204,11 +233,65 @@ class MainActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 Log.d(TAG, "버튼 클릭")
-                                sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-                                heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
+                                navController.navigate("SelectingScreen")
+                            },
+                            enabled = true,
+                            modifier = Modifier
+                                .padding(vertical = 85.dp)
+                                .fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = "본인 인증"
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                Log.d(TAG, "설정 버튼 클릭")
+
+                                navController.navigate("SettingScreen")
+                            },
+                            enabled = true,
+                            modifier = Modifier
+                                .padding(bottom = 20.dp)
+                                .fillMaxWidth()
+                                .align(Alignment.BottomCenter),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color.Transparent,
+                                contentColor = Color.Gray
+                            ),
+                        ) {
+                            Text(
+                                text = "설정"
+                            )
+                        }
+                    }
+                }
+                composable("SelectingScreen") {
+                    Box(
+                        //        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colors.background)
+                            .padding(10.dp),
+                    ) {
+                        TimeText()
+                        Button(
+                            onClick = {
+                                Log.d(TAG, "해제 버튼 클릭")
+                                MyApplication.status = "authentication"
+
+                                sensorManager =
+                                    getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                                heartRateSensor =
+                                    sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
 
                                 heartRateSensor?.also { sensor ->
-                                    sensorManager.registerListener(heartRateListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+                                    sensorManager.registerListener(
+                                        heartRateListener,
+                                        sensor,
+                                        SensorManager.SENSOR_DELAY_NORMAL
+                                    )
                                 }
 
                                 navController.navigate("LoadingScreen")
@@ -219,29 +302,44 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxWidth(),
                         ) {
                             Text(
-                                text = "심박수 측정"
+                                text = "잠금 해제"
                             )
                         }
 
                         Button(
                             onClick = {
-                                Log.d(TAG, "설정 버튼 클릭")
+                                Log.d(TAG, "등록 버튼 클릭")
+                                MyApplication.status = "register"
+
+                                sensorManager =
+                                    getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                                heartRateSensor =
+                                    sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
+
+                                heartRateSensor?.also { sensor ->
+                                    sensorManager.registerListener(
+                                        heartRateListener,
+                                        sensor,
+                                        SensorManager.SENSOR_DELAY_NORMAL
+                                    )
+                                }
 
                                 navController.navigate("LoadingScreen")
                             },
                             enabled = true,
-                            modifier = Modifier
-                                .padding(vertical = 70.dp)
-                                .fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 backgroundColor = Color.Transparent,
-                                contentColor = Color.Gray),
+                                contentColor = MaterialTheme.colors.primary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp)
+                                .align(Alignment.BottomCenter),
                         ) {
                             Text(
-                                text = "설정"
+                                text = "등록"
                             )
                         }
-
                     }
                 }
                 composable("LoadingScreen"){
@@ -309,10 +407,29 @@ class MainActivity : ComponentActivity() {
                         Text(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 40.dp),
+                                .padding(top = 90.dp),
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colors.primary,
+                            color = MaterialTheme.colors.onSurfaceVariant,
                             text = deviceId
+                        )
+
+                        Image (
+                            alignment = Alignment.Center,
+                            painter = painterResource(id = R.drawable.close),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 150.dp)
+                                .pointerInteropFilter {
+                                    when (it.action) {
+                                        MotionEvent.ACTION_DOWN -> {
+                                            Log.d(TAG, "Pressed")
+                                            navController.navigate("HomeScreen")
+                                        }
+                                        else -> false
+                                    }
+                                    true
+                                },
+                            contentDescription = "setting",
                         )
                     }
                 }
@@ -320,6 +437,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
+    // 심박수 등록 API 연동
     fun enroll(list: List<List<Float>>) {
         var apiClient = ApiClient(this)
 
@@ -335,6 +454,7 @@ class MainActivity : ComponentActivity() {
                     Log.d("##", "onResponse 성공: " + result?.toString())
                     Toast.makeText(this@MainActivity, "등록 성공", Toast.LENGTH_SHORT).show()
                     MyApplication.preferences.setString("isFirst", "false")
+                    navController.navigate("HomeScreen")
                 } else {
                     // 통신이 실패한 경우(응답코드 3xx, 4xx 등)
                     var result: EnrollResponseModel? = response.body()
@@ -345,6 +465,7 @@ class MainActivity : ComponentActivity() {
                     Log.d("##", "Error Response: $errorBody")
 
                     Toast.makeText(this@MainActivity, "다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+                    navController.navigate("HomeScreen")
                 }
             }
 
@@ -355,6 +476,7 @@ class MainActivity : ComponentActivity() {
         })
     }
 
+    // 잠금 해제 API 연동
     fun authenticate() {
         var apiClient = ApiClient(this)
 
@@ -369,6 +491,7 @@ class MainActivity : ComponentActivity() {
                     Toast.makeText(this@MainActivity, "인증 성공", Toast.LENGTH_SHORT).show()
                     // 심박수 측정 센서 정지
                     sensorManager.unregisterListener(heartRateListener)
+                    navController.navigate("CompleteScreen")
                 } else {
                     // 통신이 실패한 경우(응답코드 3xx, 4xx 등)
                     var result: AuthenticationResponseModel? = response.body()
