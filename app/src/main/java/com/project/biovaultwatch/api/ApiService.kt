@@ -2,8 +2,10 @@ package com.project.biovaultwatch.api
 
 import com.project.biovaultwatch.api.model.request.AuthenticationRequestModel
 import com.project.biovaultwatch.api.model.request.EnrollRequestModel
+import com.project.biovaultwatch.api.model.request.UnlockRequestModel
 import com.project.biovaultwatch.api.model.response.AuthenticationResponseModel
 import com.project.biovaultwatch.api.model.response.EnrollResponseModel
+import com.project.biovaultwatch.api.model.response.UnlockResponseModel
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -22,5 +24,9 @@ interface ApiService {
         @Body parameters: AuthenticationRequestModel
     ): Call<AuthenticationResponseModel>
 
-
+    // 잠금 해제
+    @POST("/api/unlock")
+    fun unlock(
+        @Body parameters: UnlockRequestModel
+    ): Call<UnlockResponseModel>
 }

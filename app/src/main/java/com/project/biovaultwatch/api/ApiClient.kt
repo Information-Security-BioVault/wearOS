@@ -17,7 +17,7 @@ import javax.net.ssl.X509TrustManager
 
 class ApiClient(val context: Context) {
 
-    val server_url = "http://192.168.0.32:5001"
+    val server_url = "http://172.30.1.84:5001"
 
     val gson = Gson()
 

@@ -61,8 +61,10 @@ import com.project.biovaultwatch.R
 import com.project.biovaultwatch.api.ApiClient
 import com.project.biovaultwatch.api.model.request.AuthenticationRequestModel
 import com.project.biovaultwatch.api.model.request.EnrollRequestModel
+import com.project.biovaultwatch.api.model.request.UnlockRequestModel
 import com.project.biovaultwatch.api.model.response.AuthenticationResponseModel
 import com.project.biovaultwatch.api.model.response.EnrollResponseModel
+import com.project.biovaultwatch.api.model.response.UnlockResponseModel
 import com.project.biovaultwatch.presentation.theme.BioVaultWatchTheme
 import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 import retrofit2.Call
@@ -77,6 +79,7 @@ class MainActivity : ComponentActivity() {
     var heartRateList = mutableListOf<Float>()
 
     var deviceId = ""
+    var validationCode = 0
 
     lateinit var navController: NavHostController
 
@@ -476,7 +479,7 @@ class MainActivity : ComponentActivity() {
         })
     }
 
-    // 잠금 해제 API 연동
+    // 본인 인증 API 연동
     fun authenticate() {
         var apiClient = ApiClient(this)
 
@@ -489,9 +492,10 @@ class MainActivity : ComponentActivity() {
                     var result: AuthenticationResponseModel? = response.body()
                     Log.d("##", "onResponse 성공: " + result?.toString())
                     Toast.makeText(this@MainActivity, "인증 성공", Toast.LENGTH_SHORT).show()
+                    validationCode = result?.validation_code!!
+                    unlock()
                     // 심박수 측정 센서 정지
                     sensorManager.unregisterListener(heartRateListener)
-                    navController.navigate("CompleteScreen")
                 } else {
                     // 통신이 실패한 경우(응답코드 3xx, 4xx 등)
                     var result: AuthenticationResponseModel? = response.body()
@@ -506,6 +510,40 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onFailure(call: Call<AuthenticationResponseModel>, t: Throwable) {
+                // 통신 실패
+                Log.d("##", "onFailure 에러: " + t.message.toString());
+            }
+        })
+    }
+
+    // 잠금 해제 API 연동
+    fun unlock() {
+        var apiClient = ApiClient(this)
+
+        var unlockData = UnlockRequestModel(deviceId, validationCode)
+
+        apiClient.apiService.unlock(unlockData)?.enqueue(object : Callback<UnlockResponseModel> {
+            override fun onResponse(call: Call<UnlockResponseModel>, response: Response<UnlockResponseModel>) {
+                if (response.isSuccessful) {
+                    // 정상적으로 통신이 성공된 경우
+                    var result: UnlockResponseModel? = response.body()
+                    Log.d("##", "onResponse 성공: " + result?.toString())
+                    Toast.makeText(this@MainActivity, "잠금 해제 성공", Toast.LENGTH_SHORT).show()
+                    navController.navigate("CompleteScreen")
+                } else {
+                    // 통신이 실패한 경우(응답코드 3xx, 4xx 등)
+                    var result: UnlockResponseModel? = response.body()
+                    Log.d("##", "onResponse 실패")
+                    Log.d("##", "onResponse 실패: " + response.code())
+                    Log.d("##", "onResponse 실패: " + response.body())
+                    val errorBody = response.errorBody()?.string() // 에러 응답 데이터를 문자열로 얻음
+                    Log.d("##", "Error Response: $errorBody")
+
+                    Toast.makeText(this@MainActivity, "다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<UnlockResponseModel>, t: Throwable) {
                 // 통신 실패
                 Log.d("##", "onFailure 에러: " + t.message.toString());
             }
