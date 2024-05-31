@@ -1,10 +1,8 @@
-import com.chaquo.python.pythonVersionInfo
-
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     // 파이썬 코드 실행을 위한 Chaquopy 플러그인 추가
-    id("com.chaquo.python")
+//    id("com.chaquo.python")
 }
 
 android {
@@ -13,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.project.biovaultwatch"
-        minSdk = 30
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -22,11 +20,12 @@ android {
         }
 
         // 파이썬 코드 실행을 위한 Chaquopy 플러그인 추가
-        ndk {
-            // On Apple silicon, you can omit x86_64.
-            abiFilters += listOf("arm64-v8a", "x86_64", "armeabi-v7a")
-        }
+//        ndk {
+//            // On Apple silicon, you can omit x86_64.
+//            abiFilters += listOf("arm64-v8a", "x86_64", "armeabi-v7a")
+//        }
 
+        /*
         flavorDimensions += "pyVersion"
         productFlavors {
 //            create("py38") { dimension = "pyVersion" }
@@ -34,6 +33,7 @@ android {
 //            create("py310") { dimension = "pyVersion" }
 //            create("py311") { dimension = "pyVersion" }
         }
+         */
 
     }
 
@@ -57,6 +57,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        dataBinding = true
     }
 
     composeOptions {
@@ -70,7 +71,7 @@ android {
 }
 
 // 파이썬 코드 실행을 위한 Chaquopy 플러그인 추가
-chaquopy {
+/* chaquopy {
     defaultConfig {
         // 주석된 buildPython 설정 제거
 //        buildPython("3.9.6")
@@ -98,15 +99,7 @@ chaquopy {
         setSrcDirs(listOf("src/main/python"))
     }
 }
-
-allprojects {
-    repositories {
-        maven {url = uri("https://chaquo.com/maven/")}   // 파이썬 코드 실행을 위한 Chaquopy 플러그인 추가
-        maven {url = uri("https://jitpack.io") }
-        mavenCentral()
-        jcenter() // Warning: this repository is going to shut down soon
-    }
-}
+ */
 
 
 
@@ -126,8 +119,8 @@ dependencies {
     implementation("com.google.guava:guava:30.1.1-android")
     implementation("androidx.concurrent:concurrent-futures-ktx:1.1.0")
     //fitness api
-    implementation("com.google.android.gms:play-services-fitness:21.1.0")
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
+//    implementation("com.google.android.gms:play-services-fitness:21.1.0")
+//    implementation("com.google.android.gms:play-services-auth:20.7.0")
     //samsung healthcare
 //    implementation("com.samsung.android.sdk.healthdata:health-data:2.16.0")
 //    implementation("com.samsung.android.sdk:healthdata-store:2.16.0")
@@ -145,6 +138,13 @@ dependencies {
 
     implementation("io.coil-kt:coil-gif:2.0.0-rc02")
     implementation("io.coil-kt:coil-compose:2.0.0-rc02")
+    // api
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0") // JSON 변환
+    implementation("com.squareup.okhttp3:okhttp:4.10.0") // OkHttp 라이브러리
+    implementation("com.squareup.okhttp3:logging-interceptor:3.11.0")
+    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
+    implementation("com.squareup.okhttp3:okhttp-urlconnection:4.9.0")
 
     // 파이썬 코드 실행을 위한 Chaquopy 플러그인 추가
 //    implementation("com.chaquo.python:python:15.0.1")

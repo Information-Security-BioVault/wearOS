@@ -6,7 +6,9 @@
     -->
     <string name="main_information">BioVault 잠금 해제</string>
     <string name="button_check">심박수 측정하기</string>
-    <string name="title_activity_test">TestActivity</string>
+    <string name="loading_information">심박수 측정 중</string>
+    <string name="complete_information">잠금 해제 완료</string>
+    <string name="setting_information">device ID</string>
     <string name="google_fit_app_id">712806370596-c76i9q5kh4devfuqddm8nsj1oab84a4u.apps.googleusercontent.com</string>
     <!--
     This string is used for square devices and overridden by hello_world in
